@@ -38,6 +38,7 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
     double timeCharacterizing;
     double maxSpeed;
     PathPlanner2024 pathplanner = new PathPlanner2024();
+    private final Telemetry logger;
 
     public CommandSwerveDrivetrain(SwerveDrivetrainConstants driveTrainConstants, double OdometryUpdateFrequency,
             double maxSpeed, HolonomicPathFollowerConfig holoConfig,
@@ -52,6 +53,10 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
         if (Utils.isSimulation()) {
             startSimThread();
         }
+
+        logger = new Telemetry(maxSpeed);
+
+        registerTelemetry(logger::telemeterize);
     }
 
     public CommandSwerveDrivetrain(SwerveDrivetrainConstants driveTrainConstants, double maxSpeed,
