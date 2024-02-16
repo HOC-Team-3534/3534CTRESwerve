@@ -2,6 +2,7 @@ package swerve;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.ejml.simple.SimpleMatrix;
@@ -14,10 +15,12 @@ import com.ctre.phoenix6.mechanisms.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
 import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.path.PathPlannerTrajectory;
 import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
@@ -70,6 +73,41 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
 
     public Command pathfindToPose(Pose2d endPose, PathConstraints pathConstraints, double endVelocity) {
         return pathplanner.pathfindToPose(endPose, pathConstraints, endVelocity);
+    }
+
+    public Command pathfindToPose(Translation2d endPosition, PathConstraints pathConstraints, double endVelocity) {
+        return pathplanner.pathfindToPose(endPosition, this::faceAnySideOfRobotInDirectionOfTravel, pathConstraints,
+                endVelocity);
+    }
+
+    public Rotation2d faceAnySideOfRobotInDirectionOfTravel(PathPlannerTrajectory.State state) {
+        var currentHolonomicRotation = getState().Pose.getRotation();
+        var travelDirection = state.heading;
+
+        var diff = travelDirection.minus(currentHolonomicRotation);
+
+        var diffDegrees = diff.getDegrees() % 360; // -360 to 360
+        while (diffDegrees < -45) {
+            diffDegrees += 90;
+        }
+        while (diffDegrees > 45) {
+            diffDegrees -= 90;
+        }
+        // diffDegrees between -45 to 45;
+
+        return Rotation2d.fromDegrees(currentHolonomicRotation.getDegrees() % 360 + diffDegrees);
+    }
+
+    public Rotation2d faceFrontTowardsRobotDirectionOfTravel(PathPlannerTrajectory.State state) {
+        var travelDirection = state.heading;
+
+        return Rotation2d.fromDegrees(travelDirection.getDegrees() % 360);
+    }
+
+    public Command pathfindToPose(Translation2d endPosition,
+            Function<PathPlannerTrajectory.State, Rotation2d> rotationFunction, PathConstraints pathConstraints,
+            double endVelocity) {
+        return pathplanner.pathfindToPose(endPosition, rotationFunction, pathConstraints, endVelocity);
     }
 
     public Command followPath(PathPlannerPath path) {
